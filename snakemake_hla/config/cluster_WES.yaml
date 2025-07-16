@@ -1,0 +1,46 @@
+__default__:
+  mem: "8GB"
+  time: 0-6:00:00
+  output: "results/logs_slurm/{rule}/{wildcards.wildcard}.log"
+  cpus-per-task: 12
+  nodes: 1
+
+run_idxstats:
+  mem: "2000"
+  time: 29:00
+
+run_hla_depth:
+  mem: "8000"
+  time: "5:00:00"
+
+run_median_hla_depth:
+  mem: "2000"
+  time: "29:00"
+
+sort_markDuplicates:
+  mem: "144G"
+  cpus-per-task: 12
+  time: "1-00:00:00"
+
+mapBAM:
+  mem: "64GB"
+  time: "6:00:00"
+
+addRG:
+  mem: "32GB"
+
+fixmate:
+  mem: "40GB"
+
+markDuplicates:
+  mem: "40GB"
+
+trim_fastq:
+  mem: "8G"
+  time: "2:00:00"
+
+
+remove_read_suffix:
+  mem: "2G"
+  time: "1:30:00"
+

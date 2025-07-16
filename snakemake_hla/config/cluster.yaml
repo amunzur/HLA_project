@@ -1,0 +1,119 @@
+__default__:
+  mem: "200GB"
+  time: 10:00:00
+  output: "results/logs_slurm/{rule}/{wildcards.wildcard}.log"
+  cpus-per-task: 12
+  nodes: 1
+
+mask_fastq:
+  mem: "2000MB"
+  time: 29:00
+
+run_idxstats:
+  mem: "2000MB"
+  time: 29:00
+
+depth_panel_hla:
+  mem: "2GB"
+  time: "29:00"
+
+run_depth_in_probes:
+  mem: "2GB"
+  time: "29:00"
+
+depth_panel_nonHLA:
+  mem: "2GB"
+  time: "29:00"
+
+depth_exome:
+  mem: "8GB"
+  time: "5:00:00"
+
+depth_exome_MEDIAN:
+  mem: "2GB"
+  time: "29:00"
+
+depth_panel_hla_MEDIAN:
+  mem: "2GB"
+  time: "29:00"
+
+depth_panel_nonHLA_MEDIAN:
+  mem: "2000MB"
+  time: "29:00"
+
+mapBAM:
+  mem: "16GB"
+  time: "3:00:00"
+
+addRG:
+  mem: "16GB"
+
+fixmate:
+  mem: "16GB"
+
+markDuplicates:
+  mem: "16GB"
+
+sort_markDuplicates:
+  mem: "16GB"
+
+call_hla_mutations_from_type:
+  mem: "24GB"
+  time: 2-00:00:00
+
+call call_hla_type:
+  mem: "24GB"
+  time: 2-00:00:00
+
+addRG_hla:
+  mem: "24GB"
+  time: "6:00:00"
+
+align_to_patient_specific_hla_reference:
+  mem: "16GB"
+  time: "29:00"
+
+call_hla_type:
+  mem: "24GB"
+  time: "2-00:00:00"
+
+call_hla_mutations_from_type:
+  mem: "24GB"
+  time: "4-00:00:00"
+
+filter_mismatches:
+  mem: "2GB"
+  time: "29:00"
+
+filter_soft_clipping:
+  mem: "2GB"
+  time: "29:00"
+
+fixmate_hla:
+  mem: "8GB"
+  time: "6:00:00"
+
+generate_hla_fasta:
+  mem: "1GB"
+  time: "29:00"
+
+index_hla_bams:
+  mem: "1GB"
+  time: "19:00"
+
+index_hla_bams_filtered:
+  mem: "1GB"
+  time: "29:00"
+
+markDuplicates_hla:
+  mem: "16GB"
+  time: "6:00:00"
+
+sort_markDuplicates_hla:
+  mem: "16GB"
+  time: "1:00:00"
+
+sort_markDuplicates_hla_full:
+  mem: "8GB"
+  time: "1:00:00"
+
