@@ -1,0 +1,6 @@
+# Sequencing files
+*.fq.gz
+*.bam
+
+data
+
