@@ -1,0 +1,193 @@
+import pandas as pd
+import re
+import os
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+exec(open('workflow/snakemake_input_functions.py').read())
+
+workdir: "/groups/wyattgrp/users/amunzur/hla_pipeline"
+configfile: "config/config.yaml"
+
+# hla_panel_samps_df = pd.read_csv("/groups/wyattgrp/users/amunzur/hla_pipeline/resources/sample_list_panel_test.tsv", "\t")
+# samples_df = pd.read_csv("/groups/wyattgrp/users/amunzur/hla_pipeline/resources/sample_list_AE_wes.tsv", "\t")
+# samples_df = pd.concat([hla_panel_samps_df, wes_samps_df]).reset_index(drop = True)
+
+# samples_df = pd.read_csv("/groups/wyattgrp/users/amunzur/hla_pipeline/resources/sample_list_AE_wes.tsv", "\t")
+
+samples_df = pd.read_csv("/groups/wyattgrp/users/amunzur/hla_pipeline/resources/sample_list_panel_test.tsv", sep="\t")
+# samples_df = pd.read_csv("/groups/wyattgrp/users/amunzur/hla_pipeline/resources/WGS_samples.tsv", "\t")
+# samples_df = pd.read_csv("/groups/wyattgrp/users/amunzur/hla_pipeline/resources/WES_samples.tsv", sep="\t")
+
+
+# samples = ["GU-17-046-WBC", "GU-18-235-WBC-WES", "GU-18-291-WBC"] # to run the pipeline on the wes samples
+# cfDNA_samples = ["AE-180_cfDNA_Baseline_2016Aug10"]
+# WBC_samples = ["AE-180_WBC_Baseline_01Jan1900"]
+cfDNA_samples = [sample for sample in samples_df["Tumor_name"].tolist() if pd.notna(sample)]
+WBC_samples = [sample for sample in samples_df["WBC_name"].tolist() if pd.notna(sample)]
+samples = cfDNA_samples + WBC_samples
+# samples = ["GU-18-351_WBC-Baseline-2018Oct10"]
+
+
+# cfDNA_samples=["AE-055_cfDNA_Baseline_2015Jun01_WES"]
+# WBC_samples=["AE-055_WBC_Baseline_01Jan1900_WES"]
+# samples = cfDNA_samples + WBC_samples
+
+pair1 = [str(sample) + "_1" for sample in samples]
+pair2 = [str(sample) + "_2" for sample in samples]
+all_pairs = pair1 + pair2
+
+DIR_fastqc_raw = config["DIR_fastqc_raw"]
+PATH_hg38 = config["PATH_hg38"]
+PATH_bed = config["PATH_bed"]
+PATH_gcwig = config["PATH_gcwig"]
+DIR_fastq = config["DIR_fastq"]
+DIR_fastqc_processed = config["DIR_fastqc_processed"]
+DIR_bams = config["DIR_bams"]
+DIR_metrics = config["DIR_metrics"]
+DIR_results = config["DIR_results"]
+DIR_resources = config["DIR_resources"]
+DIR_temp = config["DIR_temp"]
+
+# target files for rule all
+fastqc_raw = expand(DIR_fastqc_raw + "/{wildcard}_fastqc.html", wildcard=all_pairs)
+mask_fastq = expand(DIR_fastq + "/masked/{wildcard}.fq", wildcard=all_pairs)
+trim_fastq = [
+    expand(DIR_fastq + "/trimmed/{wildcard}_1.fq", wildcard=samples),
+    expand(DIR_fastq + "/trimmed/{wildcard}_2.fq", wildcard=samples),
+]
+
+# Generate the HLA bam, aligned to the patient specific HLA reference
+hla_bam_full = expand(DIR_bams + "/sorted_hla_full/{wildcard}.bam.bai", wildcard=samples)
+hla_bam_filtered = expand(DIR_bams + "/sorted_hla_filtered/{wildcard}.bam.bai", wildcard=samples)
+
+# Generate the hg38 bam, from all other regions in the hg38
+hg38_bam = expand(DIR_bams + "/sorted/{wildcard}.bam.bai", wildcard=samples)
+
+# HLA polysolver
+polysolver_shell_call_hla_type = expand(DIR_results + "/polysolver/hla_types/{wildcard}/winners.hla.txt", wildcard=WBC_samples)
+polysolver_shell_call_hla_mutations_from_type = expand(DIR_results + "/polysolver/hla_mutations/{wildcard}/hla_mutations/hla.intervals", wildcard=cfDNA_samples)
+polysolver_shell_annotate_hla_mutations = expand(DIR_results + "/polysolver/hla_mutations/{wildcard}/hla_mutations/{wildcard}.mutect.unfiltered.annotated", wildcard=cfDNA_samples)
+
+# prepare LOHHLA inputs
+prepare_ploidy_estimates=expand(DIR_results + "/sequenza_sln/{wildcard}/{wildcard}_alternative_solutions_LOHHLA.txt", wildcard=cfDNA_samples)
+get_hla_fasta=expand(DIR_resources+"/lohhla_fasta/{wildcard}/hla_fasta.fa.fai", wildcard=WBC_samples)
+get_hla_fasta_CDS=expand(DIR_resources + "/patient_hla_CDS/{wildcard}/hla_fasta.fa", wildcard=WBC_samples)
+tumorbam_symlinks=expand(DIR_results + "/data/bam/lohhla_bams/{wildcard}/{wildcard}.bam", wildcard=cfDNA_samples)
+wbcbam_symlinks=expand(DIR_results + "/data/bam/lohhla_bams/{wildcard}/{wildcard}.bam", wildcard=WBC_samples)
+symlink_bams = [tumorbam_symlinks]
+reformat_polysolver_bams = expand(DIR_results + "/polysolver/hla_types/{wildcard}/winners.hla.LOHHLA.txt", wildcard=WBC_samples)
+
+# Sequenza
+sequenza_sln=expand(DIR_results + "/sequenza_sln/{wildcard}" + "/{wildcard}_segments.txt", wildcard=cfDNA_samples)
+
+# some metrics
+extract_dup_fraction=expand(DIR_metrics + "/duplicate_fraction/{wildcard}.txt", wildcard=samples)
+raw_read_counts = expand(DIR_metrics + "/raw_fastq_read_counts/{wildcard}.txt", wildcard=samples)
+trimmed_read_counts=expand(DIR_metrics + "/trimmed_read_counts/{wildcard}.txt", wildcard=samples)
+trimmed_combined_read_counts = expand(DIR_metrics + "/trimmed_combined_read_counts/{wildcard}.txt", wildcard=samples)
+
+# DEPTH METRICS
+depth_exome=expand(DIR_metrics+"/depth_exome/{wildcard}.txt", wildcard=samples)
+depth_exome_MEDIAN=expand(DIR_metrics+"/depth_exome_MEDIAN/{wildcard}.txt", wildcard=samples)
+depth_panel_hla=expand(DIR_metrics+"/depth_hla/{wildcard}_{gene}.txt", wildcard=samples, gene=["A", "B", "C"])
+depth_panel_hla_MEDIAN=expand(DIR_metrics+"/depth_hla_MEDIAN/{wildcard}_{gene}.txt", wildcard=samples, gene=["A", "B", "C"])
+run_depth_in_probes=expand(DIR_metrics+"/depth_probes/{wildcard}.txt", wildcard=samples)
+depth_panel_nonHLA=expand(DIR_metrics+"/depth_panel_nonHLA/{wildcard}.txt", wildcard=samples)
+depth_panel_nonHLA_MEDIAN=expand(DIR_metrics+"/depth_panel_nonHLA_MEDIAN/{wildcard}.txt", wildcard=samples)
+
+# to run dash
+combined_fq=expand(DIR_fastq + "/trimmed_combined/{wildcard}.fq.gz", wildcard=samples)
+run_dash = expand(DIR_results + "/dash_new/{wildcard}/params.txt", wildcard=cfDNA_samples) 
+
+# Insert size plots
+HLA_insert_sizes = expand(DIR_results + "/metrics/hla_fragment/HLA_{gene}_{wildcard}.png", wildcard=samples, gene=["A", "B", "C"])
+WES_insert_sizes = expand(DIR_results + "/metrics/WES_fragment/{wildcard}.png", wildcard=samples)
+
+# Quantify T cell infiltration
+Tcell = expand(DIR_results + "/TcellExtract/figures/{wildcard}.pdf", wildcard=samples)
+
+# Mutation calling
+mutect2_reference_dict=expand("/groups/wyattgrp/users/amunzur/hla_pipeline/resources/lohhla_fasta/{wildcard}/hla_fasta.dict", wildcard=WBC_samples)
+mutect_mutations=expand(DIR_results + "/variant_calling_somatic_raw/Mutect2/{wildcard}.vcf.gz", wildcard=cfDNA_samples)
+vardict_mutations=expand(DIR_results+ "/variant_calling_somatic_raw/Vardict/{wildcard}.vcf", wildcard=cfDNA_samples)
+
+call_variants_somatic = expand(
+    DIR_results + "/variant_calling_somatic/{variant_caller}/{wildcard}.vcf.gz",
+    variant_caller=["Mutect2", "Vardict"],
+    wildcard=cfDNA_samples,
+    )
+
+run_annovar_somatic = expand(
+    DIR_results + "/data/variant_tables/somatic/{variant_caller}/{wildcard}.tsv",
+    variant_caller=["Mutect2", "Vardict"],
+    wildcard=cfDNA_samples,
+)
+
+# Mutation calling in HLA regions
+HLA_mutect_mutations=expand(DIR_results + "/HLA_variant_calling_somatic_raw/Mutect2/{wildcard}.vcf.gz", wildcard=cfDNA_samples)
+# HLA_vardict_mutations=expand(DIR_results+ "/HLA_variant_calling_somatic_raw/Vardict/{wildcard}.vcf", wildcard=cfDNA_samples)
+
+# Run annovar in HLA regions
+HLA_run_annovar_somatic = expand(
+    DIR_results + "/data/HLA_variant_tables/somatic/{variant_caller}/{wildcard}.tsv",
+    variant_caller=["Mutect2"],
+    wildcard=cfDNA_samples,
+)
+
+rule all:
+    input:
+        # fastqc_raw,
+        # expand(DIR_fastq + "/trimmed/{wildcard}_1.fq.gz", wildcard=WBC_samples),
+        # expand(DIR_fastq + "/trimmed/{wildcard}_2.fq.gz", wildcard=WBC_samples),
+        # polysolver_shell_call_hla_type,
+        # polysolver_shell_call_hla_mutations_from_type,
+        # polysolver_shell_annotate_hla_mutations,
+        # hla_bam_full,
+        # hla_bam_filtered,
+        # hg38_bam,
+        # final_bam,
+        # get_hla_fasta,
+        # get_hla_fasta_CDS,
+        # symlink_bams,
+        # reformat_polysolver_bams,
+        # raw_read_counts,
+        # extract_dup_fraction,
+        # trimmed_read_counts,
+        # run_dash,
+        # WES_insert_sizes,
+        # HLA_insert_sizes,
+        # Tcell,
+        # depth_exome,
+        # depth_exome_MEDIAN,
+        # depth_panel_hla,
+        # depth_panel_hla_MEDIAN,
+        # run_depth_in_probes,
+        # depth_panel_nonHLA,
+        # depth_panel_nonHLA_MEDIAN,
+        # sequenza_sln,
+        # combined_fq,
+        # trimmed_combined_read_counts,
+        # call_variants_somatic,
+        # run_annovar_somatic,
+        # vardict_mutations,
+        HLA_mutect_mutations,
+        # HLA_vardict_mutations,
+        HLA_run_annovar_somatic
+
+##### Modules #####
+include: "rules/process_fastq.smk"
+include: "rules/process_bams.smk"
+include: "rules/make_hla_bams.smk"
+include: "rules/run_hla_tools.smk"
+include: "rules/run_sequenza.smk"
+include: "rules/run_lohhla.smk"
+include: "rules/run_dash.smk"
+include: "rules/run_metrics.smk"
+include: "rules/run_TcellExtract.smk"
+include: "rules/merge_bams.smk"
+include: "rules/prepare_lohhla_inputs.smk"
+include: "rules/run_somatic_mutations.smk"
+include: "rules/annotation.smk"
+include: "rules/HLA_run_somatic_mutations.smk"
+include: "rules/HLA_annotation.smk"
