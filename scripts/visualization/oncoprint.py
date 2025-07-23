@@ -31,7 +31,7 @@ Output is saved as both PNG and PDF.
 
 path_sample_list="/groups/wyattgrp/users/amunzur/hla_pipeline/resources/sample_list_panel_test.tsv"
 path_loh="/groups/wyattgrp/users/amunzur/hla_pipeline/results/loh/lohhla_dash_compiled.csv"
-path_ctdna_mutations="/groups/wyattgrp/users/amunzur/hla_pipeline/results/variant_calling/SOMATIC_SSCS2_curated.csv"
+path_ctdna_mutations="/groups/wyattgrp/users/amunzur/hla_project/snakemake_hla/results/variant_calling/SOMATIC_SSCS2_curated.csv"
 path_ctdna_frac_and_ploidy="/groups/wyattgrp/users/amunzur/hla_pipeline/resources/sample_ploidy.tsv"
 
 mut_dict = {
