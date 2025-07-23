@@ -49,32 +49,7 @@ rule trim_fastq:
         --thread {threads}
         """
 
-# rule remove_read_suffix:
-#     input:
-#         R1=DIR_fastq + "/trimmed/{wildcard}_1.fq.gz",
-#         R2=DIR_fastq + "/trimmed/{wildcard}_2.fq.gz",
-#     output:
-#         R1=temp(DIR_fastq + "/trimmed_suffixremoved/{wildcard}_1.fq.gz"),
-#         R2=temp(DIR_fastq + "/trimmed_suffixremoved/{wildcard}_2.fq.gz"),
-#     shell:
-#         """
-#         zcat {input.R1} | sed '/^@/s/\/[12]//' | gzip > {output.R1}
-#         zcat {input.R2} | sed '/^@/s/\/[12]//' | gzip > {output.R2}
-#         """
-
-
-
-    
-# to run dash later
-# rule combine_trimmed_fq:
-#     input:
-#         R1=DIR_fastq + "/trimmed/{wildcard}_1.fq.gz",
-#         R2=DIR_fastq + "/trimmed/{wildcard}_2.fq.gz",
-#     output:
-#         DIR_fastq + "/trimmed_combined/{wildcard}.fq"
-#     shell:
-#         "cat {input.R1} {input.R2} > {output}"
-
+# to run DASH later
 rule combine_trimmed_fq:
     input:
         R1=DIR_fastq + "/trimmed/{wildcard}_1.fq.gz",
