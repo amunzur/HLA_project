@@ -5,7 +5,6 @@ import pandas as pd
 import os
 import re
 import numpy as np
-from scipy.stats import spearmanr
 import subprocess
 import matplotlib.gridspec as gridspec
 
@@ -14,7 +13,8 @@ Oncoprint style, compares the concordance of the calls made by Optitype, Polysol
 """
 text_color_dict={True: "black", False: "red"}
 
-hla_types = pd.read_csv('https://docs.google.com/spreadsheets/d/19Gm3X6io2Fgcrui8qILxeSzpwNW517siLnhyKETCquM/export?format=csv&gid=734748589')
+# hla_types = pd.read_csv('https://docs.google.com/spreadsheets/d/19Gm3X6io2Fgcrui8qILxeSzpwNW517siLnhyKETCquM/export?format=csv&gid=734748589')
+hla_types=pd.read_csv("/groups/wyattgrp/users/amunzur/hla_project/data/HLA_typing/HLA - WES and WGS list - Clinical HLA typing .csv")
 hla_types=hla_types[['Patient', 'Allele', "Clinical assay", 'Polysolver_targeted', 'LILAC_targeted', 'Optitype_targeted', 'Polysolver_wes', 'LILAC_wes', 'Optitype_wes', "LILAC_wgs"]]
 
 # Just first two digits only
@@ -34,6 +34,8 @@ for hla_caller in ["Polysolver", "LILAC", "Optitype"]:
 
 hla_types["LILAC_wgs_match"]=hla_types["LILAC_wgs"]==hla_types["clinical assay two dig"]
 hla_types.loc[hla_types["LILAC_wgs"]=="NO WGS", "LILAC_wgs_match"] = ""
+hla_types.to_csv("/groups/wyattgrp/users/amunzur/hla_project/data/HLA_typing/clinical_grade_assay_vs_three_callers.csv", index=False)
+
 
 def set_up_grid(df):
     global allele_num_ax, clinical_assay_ax, targ_poly_ax, targ_opt_ax, targ_lilac_ax, targ_conc_ax, targ_conc_poly_ax, targ_conc_opt_ax, targ_conc_lilac_ax
